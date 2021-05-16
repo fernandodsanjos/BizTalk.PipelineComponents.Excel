@@ -116,6 +116,9 @@
     <Compile Include="Encoder\Encoder.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="BizTalk.PipelineComponents.Excel.nuspec">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="key.snk" />
     <None Include="packages.config" />
     <None Include="README.md" />
