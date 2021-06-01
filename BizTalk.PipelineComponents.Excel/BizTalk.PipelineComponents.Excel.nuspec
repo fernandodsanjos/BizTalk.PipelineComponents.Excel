@@ -2,11 +2,11 @@
 <package >
   <metadata>
     <id>BizTalk.PipelineComponents.Excel</id>
-    <version>1.0.0.0</version>
+    <version>1.0.0.1</version>
     <authors>Fernando Pires</authors>
 	<projectUrl>https://github.com/fernandodsanjos/BizTalk.PipelineComponents.Excel</projectUrl>
     <description>BizTalk pipelineComponent to Encode and Decode Excel files</description>
-	<releaseNotes>First release</releaseNotes>
+	<releaseNotes>FIX for empty/null rows</releaseNotes>
   </metadata>
   <files>
     <file src="bin\Debug\BizTalk.PipelineComponents.Excel.dll" target="lib\net472" />

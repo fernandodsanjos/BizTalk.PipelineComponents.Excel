@@ -58,6 +58,11 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
                 {
                     for (int i = eSchema.Index; i < eSchema.Index + eSchema.Occurrence; i++)
                     {
+                        IRow r = sheet.GetRow(i);
+
+                        if (r == null)
+                            continue;
+
                         eSchema.Process(wtr, sheet.GetRow(i));
                     }
                 }
@@ -67,7 +72,12 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
                   
                     for (int i = eSchema.Index; i < length; i++)
                     {
-                        eSchema.Process(wtr, sheet.GetRow(i));
+                        IRow r = sheet.GetRow(i);
+
+                        if (r == null)
+                            continue;
+
+                        eSchema.Process(wtr,r);
                     }
                 }
               

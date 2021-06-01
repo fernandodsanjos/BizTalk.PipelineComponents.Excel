@@ -51,7 +51,12 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
             foreach (KeyValuePair<int, ExcelCellSchema> cell in this.Cells)
             {
                 ExcelCellSchema eSchema = cell.Value;
-                eSchema.Process(wtr, sheet.GetCell(cell.Key,MissingCellPolicy.CREATE_NULL_AS_BLANK));
+
+                ICell c = sheet.GetCell(cell.Key, MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                if (c == null)
+                    continue;
+
+                eSchema.Process(wtr,c );
             }
 
             wtr.WriteEndElement();
