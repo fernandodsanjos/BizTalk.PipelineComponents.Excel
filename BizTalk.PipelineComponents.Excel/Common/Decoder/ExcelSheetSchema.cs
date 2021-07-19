@@ -16,7 +16,10 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
         public string Name { get; set; }
         public string Namespace { get;  set; }
 
-      
+        public bool IsEnvelope { get; set; }
+        //In case of envelope, which row that is unbounded
+        public int EnvelopeRow { get; set; }
+
         /// <summary>
         /// Specify which Sheet to process
         /// </summary>
@@ -38,23 +41,101 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
 
         public  void Process(XmlWriter wtr,ISheet sheet)
         {
-            if(String.IsNullOrEmpty(this.Namespace))
+            if(this.IsEnvelope)
             {
-                wtr.WriteStartElement( this.Name);
+                ProcessEnvelope(wtr, sheet);
+            }
+            else
+            {
+                ProcessRegular(wtr, sheet);
+            }
+          
+        }
+
+
+        private void ProcessEnvelope(XmlWriter wtr, ISheet sheet)
+        {
+            //Row will act as group node
+            
+            int length = sheet.LastRowNum + 1;
+
+            for (int x = EnvelopeRow; x < length; x++)
+            {
+                if (String.IsNullOrEmpty(this.Namespace))
+                {
+                    wtr.WriteStartElement(this.Name);
+                }
+                else
+                {
+                    wtr.WriteStartElement("s", this.Name, this.Namespace);
+                }
+
+                IRow er = sheet.GetRow(x);
+
+                if (er == null)
+                    continue;
+
+                foreach (KeyValuePair<int, ExcelRowSchema> row in this.Rows)
+                {
+                    IRow r = null;
+
+                    ExcelRowSchema eSchema = row.Value;
+
+                    if (eSchema.Index == EnvelopeRow)
+                    {
+                        eSchema.Process(wtr, er);
+                    }
+                    else
+                    {
+                        if (eSchema.Occurrence > -1)
+                        {
+                            for (int i = eSchema.Index; i < eSchema.Index + eSchema.Occurrence; i++)
+                            {
+                                r = sheet.GetRow(i);
+
+                                if (r == null)
+                                    continue;
+
+                                eSchema.Process(wtr, sheet.GetRow(i));
+                            }
+                        }
+                        else
+                        {
+                            r = sheet.GetRow(eSchema.Index);
+
+                            eSchema.Process(wtr, r);
+                        }
+                    }
+
+                   
+
+                }
+
+
+                wtr.WriteEndElement();
+
+            }
+        }
+
+        private void ProcessRegular(XmlWriter wtr, ISheet sheet)
+        {
+            if (String.IsNullOrEmpty(this.Namespace))
+            {
+                wtr.WriteStartElement(this.Name);
             }
             else
             {
                 wtr.WriteStartElement("s", this.Name, this.Namespace);
             }
-            
+
 
             foreach (KeyValuePair<int, ExcelRowSchema> row in this.Rows)
             {
-                
+
 
                 ExcelRowSchema eSchema = row.Value;
 
-                if(eSchema.Occurrence > -1)
+                if (eSchema.Occurrence > -1)
                 {
                     for (int i = eSchema.Index; i < eSchema.Index + eSchema.Occurrence; i++)
                     {
@@ -69,7 +150,7 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
                 else
                 {
                     int length = sheet.LastRowNum + 1;
-                  
+
                     for (int i = eSchema.Index; i < length; i++)
                     {
                         IRow r = sheet.GetRow(i);
@@ -77,10 +158,10 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
                         if (r == null)
                             continue;
 
-                        eSchema.Process(wtr,r);
+                        eSchema.Process(wtr, r);
                     }
                 }
-              
+
             }
 
             wtr.WriteEndElement();

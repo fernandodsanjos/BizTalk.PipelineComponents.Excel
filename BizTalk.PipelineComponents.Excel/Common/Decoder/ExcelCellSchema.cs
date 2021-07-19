@@ -24,8 +24,19 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
             }
             set
             {
-               
-               
+
+                switch (value)
+                {
+                    case XmlTypeCode.Boolean:
+                    case XmlTypeCode.Double:
+                    case XmlTypeCode.DateTime:
+                    case XmlTypeCode.Date:
+                        xmlxType = value;
+                        break;
+                    default:
+                        xmlxType = XmlTypeCode.String;
+                        break;
+                }
             }
         }
        

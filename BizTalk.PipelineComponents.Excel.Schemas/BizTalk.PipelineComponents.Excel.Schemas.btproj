@@ -75,6 +75,16 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="key.snk" />
+    <Schema Include="SingleOrder.xsd">
+      <SubType>Task</SubType>
+      <TypeName>SingleOrder</TypeName>
+      <Namespace>BizTalk.PipelineComponents.Excel.Schemas</Namespace>
+    </Schema>
+    <Schema Include="OrderEnvelope.xsd">
+      <SubType>Task</SubType>
+      <TypeName>OrderEnvelope</TypeName>
+      <Namespace>BizTalk.PipelineComponents.Excel.Schemas</Namespace>
+    </Schema>
     <Schema Include="OrderResponse.xsd">
       <SubType>Task</SubType>
       <TypeName>OrderResponse</TypeName>

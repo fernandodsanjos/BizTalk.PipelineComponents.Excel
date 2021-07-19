@@ -19,15 +19,33 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
 
         public string Name { get; private set; }
         public string Namespace { get; private set; }
-
+        public bool Envelope { get; private set; }
 
         public ExcelWorkBookSchema(XmlSchema schema, IFormulaEvaluator formulaEvaluator)
         {
+            bool rootFound = false;
 
-            if (schema.Items.Count > 1)
-                throw new ArgumentException("Source schema is only allowed to have one root node");
+            XmlSchemaElement workbook = null;
 
-            XmlSchemaElement workbook = (XmlSchemaElement)schema.Items[0];
+            foreach (var item in schema.Items)
+            {
+                if(item is XmlSchemaAnnotation)
+                {
+                    //Check to see if its an envelope schema
+                    //In that case all rows in a sheet is expected to grouped, only Sheet is the allowed to be unbounded 
+                    Envelope = IsEnvelope((XmlSchemaAnnotation)item);
+                }
+                else
+                {
+                    workbook = (XmlSchemaElement)item;
+
+                    if(rootFound)
+                        throw new ArgumentException("Source schema is only allowed to have one root node");
+
+                    rootFound = true;
+
+                }
+            }
 
             this.Namespace = workbook.QualifiedName.Namespace;
             this.Name = workbook.QualifiedName.Name;
@@ -44,16 +62,22 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
             {
                 XmlSchemaElement sheet = (XmlSchemaElement)seq.Items[i];
 
+                if(sheet.Name == null)
+                {
+                    sheet = (XmlSchemaElement)schema.Elements[sheet.RefName];
+                }
+
                 int sheetIndex = GetIndex(sheet.Annotation, sheet.Name);
 
                 if (sheetIndex == -1)
                     sheetIndex = i;
-
+               
                 ExcelSheetSchema eSheet = new ExcelSheetSchema
                 {
                     Name = sheet.Name,
                     Namespace = sheet.QualifiedName.Namespace,
-                    Index = sheetIndex
+                    Index = sheetIndex,
+                    IsEnvelope = Envelope
                 };
 
                 this.Sheets.Add(i, eSheet);
@@ -75,13 +99,20 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
 
                     XmlSchemaComplexType rowType = (XmlSchemaComplexType)row.SchemaType;
 
+                    int occurrence = row.MaxOccursString == "unbounded" ? -1 : (int)row.MaxOccurs;//Only last Row is allowed to have unbounded
+
                     ExcelRowSchema eRow = new ExcelRowSchema
                     {
                         Name = row.Name,
                         Namespace = row.QualifiedName.Namespace,
                         Index = rowIndex,
-                        Occurrence = row.MaxOccursString == "unbounded"? -1:(int)row.MaxOccurs//Only last Row is allowed to have unbounded
+                        Occurrence = occurrence
                     };
+
+                    if(row.MinOccurs == 0 && row.MaxOccurs == 1)//Last row with this configuration is expected to be an repetative record
+                    {
+                        eSheet.EnvelopeRow = rowIndex;
+                    }
 
                     if (rowType.Attributes.Count > 0)
                     {
@@ -164,7 +195,34 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
             }
         }
 
+        private bool IsEnvelope(XmlSchemaAnnotation annotations)
+        {
 
+            if (annotations == null)
+                return false;
+
+            foreach (XmlSchemaAppInfo annotation in annotations.Items)
+            {
+                XmlNode node = annotation.Markup[0];
+                //Is null if it does not exist
+                //0-1 for multi cell span,***later
+                XmlAttribute att = node.Attributes["is_envelope"];
+
+                if (att != null)
+                {
+
+                    if (att.Value.Length > 1)
+                    {
+                        return (att.Value == "yes");
+                    }
+                 
+                }
+
+            }
+
+
+            return false;
+        }
         private int GetIndex(XmlSchemaAnnotation annotations,string nodeName)
         {
             if (annotations == null)
