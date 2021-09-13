@@ -31,6 +31,7 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
                     case XmlTypeCode.Double:
                     case XmlTypeCode.DateTime:
                     case XmlTypeCode.Date:
+                    case XmlTypeCode.Time:
                         xmlxType = value;
                         break;
                     default:
@@ -88,6 +89,11 @@ namespace BizTalk.PipelineComponents.Excel.Common.Decoder
                         DateTime date = cell.DateCellValue;
                         val = date.ToString("yyyy-MM-ddTHH:mm:ss");
 
+                    }
+                    else if (this.XmlType == XmlTypeCode.Time)
+                    {
+                        DateTime date = cell.DateCellValue;
+                        val = date.ToString("HH:mm:ss");
                     }
                     else
                         val = numericValue.ToString(CultureInfo.InvariantCulture);
