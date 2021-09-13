@@ -11,6 +11,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BizTalk.PipelineComponents.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BizTalk.PipelineComponents.Excel.Maps", "..\BizTalk.PipelineComponents.Excel.Maps\BizTalk.PipelineComponents.Excel.Maps.btproj", "{DA9D64D6-1F6E-4834-AE63-0660BB242FD7}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Files", "Files", "{9520A147-3750-4C9B-8F65-2EBCE360951D}"
+	ProjectSection(SolutionItems) = preProject
+		..\README.md = ..\README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
