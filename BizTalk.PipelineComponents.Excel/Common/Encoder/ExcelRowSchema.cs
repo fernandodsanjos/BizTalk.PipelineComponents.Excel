@@ -65,13 +65,16 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
                     //cell.SetCellType(CellType.FORMULA);
                     //cell.SetCellFormula(String.Format("$B$1*B{0}/$B$2*C{0}", i));
 
-                    ExcelCellSchema cellSchema = this.Cells[name];
-                    ICell cell = row.GetCell(cellSchema.Index);
+                    if (this.Cells.ContainsKey(name))
+                    { 
+                        ExcelCellSchema cellSchema = this.Cells[name];
+                        ICell cell = row.GetCell(cellSchema.Index);
 
-                    if (cell == null)
-                        cell = row.CreateCell(cellSchema.Index);//cellType
+                        if (cell == null)
+                            cell = row.CreateCell(cellSchema.Index);//cellType
 
-                    cellSchema.SetCellValue(value, cell);
+                        cellSchema.SetCellValue(value, cell);
+                    }
 
 
                 }
@@ -82,13 +85,16 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
                     if (reader.IsStartElement())
                     {
 
-                        ExcelCellSchema cellSchema = this.Cells[reader.LocalName];
-                        ICell cell = row.GetCell(cellSchema.Index);
+                        if (this.Cells.ContainsKey(reader.LocalName))
+                        {
+                            ExcelCellSchema cellSchema = this.Cells[reader.LocalName];
+                            ICell cell = row.GetCell(cellSchema.Index);
 
-                        if (cell == null)
-                            cell = row.CreateCell(cellSchema.Index);//cellType
+                            if (cell == null)
+                                cell = row.CreateCell(cellSchema.Index);//cellType
 
-                        cellSchema.SetCellValue(reader.Value, cell);
+                            cellSchema.SetCellValue(reader.Value, cell);
+                        }
                         
                     }
                 }

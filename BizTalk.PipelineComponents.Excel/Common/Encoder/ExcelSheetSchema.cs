@@ -15,8 +15,8 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
     {
         public string Name { get; set; }
         public string Namespace { get;  set; }
+        public bool IsVirtual { get; set; }
 
-      
         /// <summary>
         /// Specify which Sheet to process
         /// </summary>

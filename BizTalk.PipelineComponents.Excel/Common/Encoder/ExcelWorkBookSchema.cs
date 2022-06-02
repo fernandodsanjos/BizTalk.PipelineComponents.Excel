@@ -20,9 +20,10 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
         public string Name { get; private set; }
         public string Namespace { get; private set; }
 
-
+        private IFormulaEvaluator FormulaEvaluator { get;  set; }
         public ExcelWorkBookSchema(XmlSchema schema, IFormulaEvaluator formulaEvaluator)
         {
+            FormulaEvaluator = formulaEvaluator;
 
             if (schema.Items.Count > 1)
                 throw new ArgumentException("Source schema is only allowed to have one root node");
@@ -40,117 +41,146 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
 
             XmlSchemaSequence seq = (XmlSchemaSequence)tp.Particle;
 
-            for (int i = 0; i < seq.Items.Count; i++)
+            XmlSchemaElement firstElement = (XmlSchemaElement)seq.Items[0];
+
+            if (firstElement.MaxOccursString == "unbounded")
             {
-                XmlSchemaElement sheet = (XmlSchemaElement)seq.Items[i];
-
-                int sheetIndex = GetIndex(sheet.Annotation, sheet.Name);
-
-                if (sheetIndex == -1)
-                    sheetIndex = i;
-
+                //Create virtual sheet
                 ExcelSheetSchema eSheet = new ExcelSheetSchema
                 {
-                    Name = sheet.Name,
-                    Namespace = sheet.QualifiedName.Namespace,
-                    Index = sheetIndex
+                    Name = firstElement.QualifiedName.Name,
+                    Namespace = firstElement.QualifiedName.Namespace,
+                    Index = 0,
+                    IsVirtual = true
                 };
 
-                this.Sheets.Add(sheet.Name, eSheet);
-                
-               
+                this.Sheets.Add(eSheet.Name, eSheet);
 
-                XmlSchemaComplexType sheetType = (XmlSchemaComplexType)sheet.SchemaType;
-
-                XmlSchemaSequence sheetSequence = (XmlSchemaSequence)sheetType.Particle;
-
-                for (int x = 0; x < sheetSequence.Items.Count; x++)
-                {
-                    XmlSchemaElement row = (XmlSchemaElement)sheetSequence.Items[x];
-
-                    int rowIndex = GetIndex(row.Annotation, row.Name);
-
-                    if (rowIndex == -1)
-                        rowIndex = x;
-
-                    XmlSchemaComplexType rowType = (XmlSchemaComplexType)row.SchemaType;
-
-                    ExcelRowSchema eRow = new ExcelRowSchema
-                    {
-                        Name = row.Name,
-                        Namespace = row.QualifiedName.Namespace,
-                        Index = rowIndex,
-                        Occurrence = row.MaxOccursString == "unbounded"? -1:(int)row.MaxOccurs
-
-                    };
-
-                    if (rowType.Attributes.Count > 0)
-                    {
-
-                        foreach (XmlSchemaAttribute item in rowType.Attributes)
-                        {
-                            XmlSchemaSimpleType sp = item.AttributeSchemaType;
-                            
-                          //  XmlSchemaDatatype tp;
-                          //  XmlTypeCode.DateTime
-                            int cellIndex = GetIndex(item.Annotation,item.Name);
-
-                            if (cellIndex > -1)
-                            { 
-                                eRow.Cells.Add(item.Name, new ExcelCellSchema
-                                {
-                                    XmlType = GetExcelType(sp.Datatype.TypeCode),
-                                    Index = cellIndex,
-                                    Name = item.Name,
-                                    NodeType = 'A',
-                                    FormulaEvaluator = formulaEvaluator
-                                });
-                            }
-
-                              
-                        }
-
-
-                    }
-
-                    if (rowType.Particle != null)
-                    {
-                        XmlSchemaSequence rowSequence = (XmlSchemaSequence)rowType.Particle;
-
-                        foreach (XmlSchemaElement item in rowSequence.Items)
-                        {
-
-
-                            
-                            int cellIndex = GetIndex(item.Annotation,item.Name);
-
-                            if (cellIndex > -1)
-                            { 
-                                
-                                  eRow.Cells.Add(item.Name, new ExcelCellSchema
-                                  {
-                                      XmlType = GetExcelType(item.ElementSchemaType.Datatype.TypeCode),
-                                      Index = cellIndex,
-                                      Name = item.Name,
-                                      NodeType = 'E'
-                                  });
-
-                            }
-
-
-                        }
-                    }
-
-                    eSheet.Rows.Add(row.Name, eRow);
-                }
-
+                ParseRows(eSheet, seq);
 
 
             }
+            else
+            {
 
-          
+                for (int i = 0; i < seq.Items.Count; i++)
+                {
+                    XmlSchemaElement sheet = (XmlSchemaElement)seq.Items[i];
+
+                    int sheetIndex = GetIndex(sheet.Annotation, sheet.Name);
+
+                    if (sheetIndex == -1)
+                        sheetIndex = i;
+
+                    ExcelSheetSchema eSheet = new ExcelSheetSchema
+                    {
+                        Name = sheet.Name,
+                        Namespace = sheet.QualifiedName.Namespace,
+                        Index = sheetIndex
+                    };
+
+                    this.Sheets.Add(sheet.Name, eSheet);
+
+
+
+                    XmlSchemaComplexType sheetType = (XmlSchemaComplexType)sheet.SchemaType;
+
+                    XmlSchemaSequence rowSequence = (XmlSchemaSequence)sheetType.Particle;
+
+
+                    ParseRows(eSheet, rowSequence);
+
+
+                }
+
+            }
 
         }
+
+        private void ParseRows(ExcelSheetSchema sheet, XmlSchemaSequence rowSequence)
+        {
+            for (int x = 0; x < rowSequence.Items.Count; x++)
+            {
+                XmlSchemaElement row = (XmlSchemaElement)rowSequence.Items[x];
+
+                int rowIndex = GetIndex(row.Annotation, row.QualifiedName.Name);
+
+                if (rowIndex == -1)
+                    rowIndex = x;
+
+                XmlSchemaComplexType rowType = (XmlSchemaComplexType)(row.SchemaType == null ? row.ElementSchemaType:row.SchemaType);
+
+                ExcelRowSchema eRow = new ExcelRowSchema
+                {
+                    Name = row.QualifiedName.Name,
+                    Namespace = row.QualifiedName.Namespace,
+                    Index = rowIndex,
+                    Occurrence = row.MaxOccursString == "unbounded" ? -1 : (int)row.MaxOccurs
+
+                };
+
+                if (rowType.Attributes.Count > 0)
+                {
+
+                    foreach (XmlSchemaAttribute item in rowType.Attributes)
+                    {
+                        XmlSchemaSimpleType sp = item.AttributeSchemaType;
+
+                        //  XmlSchemaDatatype tp;
+                        //  XmlTypeCode.DateTime
+                        int cellIndex = GetIndex(item.Annotation, item.QualifiedName.Name);
+
+                        if (cellIndex > -1)
+                        {
+                            eRow.Cells.Add(item.Name, new ExcelCellSchema
+                            {
+                                XmlType = GetExcelType(sp.Datatype.TypeCode),
+                                Index = cellIndex,
+                                Name = item.QualifiedName.Name,
+                                NodeType = 'A',
+                                FormulaEvaluator = FormulaEvaluator
+                            });
+                        }
+
+
+                    }
+
+
+                }
+
+                if (rowType.Particle != null)
+                {
+                    XmlSchemaSequence elementSequence = (XmlSchemaSequence)rowType.Particle;
+
+                    foreach (XmlSchemaElement item in elementSequence.Items)
+                    {
+
+
+
+                        int cellIndex = GetIndex(item.Annotation, item.QualifiedName.Name);
+
+                        if (cellIndex > -1)
+                        {
+
+                            eRow.Cells.Add(item.QualifiedName.Name, new ExcelCellSchema
+                            {
+                                XmlType = GetExcelType(item.ElementSchemaType.Datatype.TypeCode),
+                                Index = cellIndex,
+                                Name = item.QualifiedName.Name,
+                                NodeType = 'E'
+                            });
+
+                        }
+
+
+                    }
+                }
+
+                sheet.Rows.Add(row.QualifiedName.Name, eRow);
+            }
+        }
+
+       
 
         public Dictionary<string, ExcelSheetSchema> Sheets
         {

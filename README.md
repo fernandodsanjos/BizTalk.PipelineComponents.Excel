@@ -54,4 +54,9 @@ All other Row record(s) will be added to each repeating row found. Meaning the i
 
 Using the shema bellow Company record would be appended to each Person record.
 
-<img src="envelope_bundle.jpg"/>
+<img src="envelope_bundle.jpg" />
+
+### Virtual Sheet
+For outgoing messages (encoding) it is possible to exclude the regular sheet record. The default sheet will then be the first one and the record node to  have to be set to unbounded.
+<img src="virtual_sheet.jpg" />
+
