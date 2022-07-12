@@ -21,14 +21,28 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
         public string Namespace { get; private set; }
 
         private IFormulaEvaluator FormulaEvaluator { get;  set; }
+
+        private XmlSchema ResolvedSchema { get; set; }
         public ExcelWorkBookSchema(XmlSchema schema, IFormulaEvaluator formulaEvaluator)
         {
+           
             FormulaEvaluator = formulaEvaluator;
+            ResolvedSchema = schema; 
+            //if (schema.Items.Count > 1)
+            //   throw new ArgumentException("Source schema is only allowed to have one root node");
 
-            if (schema.Items.Count > 1)
-                throw new ArgumentException("Source schema is only allowed to have one root node");
+            XmlSchemaElement workbook = null;
 
-            XmlSchemaElement workbook = (XmlSchemaElement)schema.Items[0];
+            foreach (var item in schema.Items)
+            {
+                if (item is XmlSchemaElement)
+                {
+                    workbook = (XmlSchemaElement)item;
+                    break;
+
+                }
+
+            }
 
             this.Namespace = workbook.QualifiedName.Namespace;
             this.Name = workbook.QualifiedName.Name;
@@ -37,7 +51,7 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
                 throw new ArgumentException("Nodes bellow root node must be of record type");
 
             //first must be complex type containing sequences of Sheet type objects
-            XmlSchemaComplexType tp = (XmlSchemaComplexType)workbook.SchemaType;
+            XmlSchemaComplexType tp = (XmlSchemaComplexType)(workbook.SchemaType == null ? workbook.ElementSchemaType : workbook.SchemaType);
 
             XmlSchemaSequence seq = (XmlSchemaSequence)tp.Particle;
 
@@ -67,6 +81,11 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
                 {
                     XmlSchemaElement sheet = (XmlSchemaElement)seq.Items[i];
 
+                    object sheetObject = (sheet.SchemaType == null ? sheet.ElementSchemaType : sheet.SchemaType);
+
+                    if (!(sheetObject is XmlSchemaComplexType))
+                        continue;
+
                     int sheetIndex = GetIndex(sheet.Annotation, sheet.Name);
 
                     if (sheetIndex == -1)
@@ -81,9 +100,9 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
 
                     this.Sheets.Add(sheet.Name, eSheet);
 
+                    XmlSchemaComplexType sheetType = (XmlSchemaComplexType)sheetObject;
 
 
-                    XmlSchemaComplexType sheetType = (XmlSchemaComplexType)sheet.SchemaType;
 
                     XmlSchemaSequence rowSequence = (XmlSchemaSequence)sheetType.Particle;
 
@@ -103,6 +122,17 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
             {
                 XmlSchemaElement row = (XmlSchemaElement)rowSequence.Items[x];
 
+                int occurrence = row.MaxOccursString == "unbounded" ? -1 : (int)row.MaxOccurs;
+
+                if (row.Annotation == null)
+                {
+                    if(ResolvedSchema.Elements.Contains(row.QualifiedName))
+                    {
+                        row = (XmlSchemaElement)ResolvedSchema.Elements[row.QualifiedName];
+                    }
+                    
+                }
+
                 int rowIndex = GetIndex(row.Annotation, row.QualifiedName.Name);
 
                 if (rowIndex == -1)
@@ -115,7 +145,7 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
                     Name = row.QualifiedName.Name,
                     Namespace = row.QualifiedName.Namespace,
                     Index = rowIndex,
-                    Occurrence = row.MaxOccursString == "unbounded" ? -1 : (int)row.MaxOccurs
+                    Occurrence = occurrence
 
                 };
 
@@ -138,7 +168,9 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
                                 Index = cellIndex,
                                 Name = item.QualifiedName.Name,
                                 NodeType = 'A',
-                                FormulaEvaluator = FormulaEvaluator
+                                FormulaEvaluator = FormulaEvaluator,
+                                Parent = eRow
+
                             });
                         }
 
@@ -167,7 +199,8 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
                                 XmlType = GetExcelType(item.ElementSchemaType.Datatype.TypeCode),
                                 Index = cellIndex,
                                 Name = item.QualifiedName.Name,
-                                NodeType = 'E'
+                                NodeType = 'E',
+                                Parent = eRow
                             });
 
                         }
@@ -232,7 +265,7 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
             //double
             //string
             //bool
-            if (typeCode == XmlTypeCode.DateTime || typeCode == XmlTypeCode.Boolean || typeCode == XmlTypeCode.String || typeCode == XmlTypeCode.Double)
+            if (typeCode == XmlTypeCode.DateTime || typeCode == XmlTypeCode.Date ||  typeCode == XmlTypeCode.Boolean || typeCode == XmlTypeCode.String || typeCode == XmlTypeCode.Double)
             {
                 return typeCode;
             }

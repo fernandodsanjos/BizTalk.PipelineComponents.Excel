@@ -29,9 +29,11 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
 
         public IFormulaEvaluator FormulaEvaluator { get; set; }
        
+        public ExcelRowSchema Parent { get; set; }
 
         public void SetCellValue(string value,ICell cell)
         {
+           
             //DateTime
             //double
             //string
@@ -57,12 +59,21 @@ namespace BizTalk.PipelineComponents.Excel.Common.Encoder
                     }
                     
                     break;
+                case XmlTypeCode.Date:
+                    DateTime deVal;
+                    if (DateTime.TryParse(value, out deVal))
+                    {
+                        cell.SetCellValue(deVal);
+                        cell.CellStyle = Parent.DateStyle;
+                    }
 
+                    break;
                 case XmlTypeCode.DateTime:
                     DateTime dtVal;
                     if (DateTime.TryParse(value, out dtVal))
                     {
                         cell.SetCellValue(dtVal);
+                        cell.CellStyle = Parent.DateTimeStyle;
                     }
                    
                     break;

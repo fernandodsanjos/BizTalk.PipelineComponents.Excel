@@ -141,23 +141,22 @@ namespace BizTalk.PipelineComponents.Excel
                 {
                     if(reader.IsStartElement() && reader.Depth == 1)
                     {
-
-                        var excelScheetSchema = this.WorkBookSchema.Sheets[reader.LocalName];
-
-                        if(excelScheetSchema.IsVirtual)
+                        if(this.WorkBookSchema.Sheets.ContainsKey(reader.LocalName))
                         {
-                            ExcelRowSchema rowSchema = excelScheetSchema.Rows[reader.LocalName];
+                            var excelScheetSchema = this.WorkBookSchema.Sheets[reader.LocalName];
 
-                            rowSchema.Process(reader.ReadSubtree(), this.WorkBook.GetSheetAt(excelScheetSchema.Index));
+                            if (excelScheetSchema.IsVirtual)
+                            {
+                                ExcelRowSchema rowSchema = excelScheetSchema.Rows[reader.LocalName];
+
+                                rowSchema.Process(reader.ReadSubtree(), this.WorkBook.GetSheetAt(excelScheetSchema.Index));
+                            }
+                            else
+                            {
+                                excelScheetSchema.Process(reader.ReadSubtree(), this.WorkBook.GetSheetAt(excelScheetSchema.Index));
+                            }
                         }
-                        else
-                        {
-                            excelScheetSchema.Process(reader.ReadSubtree(), this.WorkBook.GetSheetAt(excelScheetSchema.Index));
-                        }
-                        
-
-
-                       
+ 
 
                     }
                 }
