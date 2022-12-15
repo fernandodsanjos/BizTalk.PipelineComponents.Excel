@@ -6,7 +6,7 @@
     <authors>Fernando Pires</authors>
 	<projectUrl>https://github.com/fernandodsanjos/BizTalk.PipelineComponents.Excel</projectUrl>
     <description>BizTalk pipelineComponent to Encode and Decode Excel files</description>
-	<releaseNotes>Added possibility to use WCF-SQL schemas and output</releaseNotes>
+	<releaseNotes>Updated NPOI version to 2.5.6</releaseNotes>
   </metadata>
   <files>
     <file src="bin\Debug\BizTalk.PipelineComponents.Excel.dll" target="lib\net472" />
